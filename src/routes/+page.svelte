@@ -12,6 +12,8 @@
 	const submit = (e: SubmitEvent) => {
 		e.preventDefault();
 
+		history = [...history, { message: prompt, from: 'user' }];
+
 		fetch('/api/chat', {
 			method: 'POST',
 			headers: {
@@ -20,9 +22,8 @@
 			body: JSON.stringify(prompt)
 		})
 			.then((res) => res.json())
-			.then((res) => history.push({ message: res, from: 'bob' }));
+			.then((res) => (history = [...history, { message: res, from: 'bob' }]));
 
-		history.push({ message: prompt, from: 'user' });
 		prompt = '';
 	};
 </script>

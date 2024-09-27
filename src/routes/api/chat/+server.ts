@@ -25,5 +25,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	});
 
 	context.dispose();
-	return new Response(r);
+	return new Response(JSON.stringify(r));
 };
