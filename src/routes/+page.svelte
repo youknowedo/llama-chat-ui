@@ -1,58 +1,112 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Send } from 'lucide-svelte';
+	import Loader from 'lucide-svelte/icons/loader';
+	import type { ChatHistoryItem } from 'node-llama-cpp';
+	import { onMount } from 'svelte';
+	import type { LastEvaluation } from '../app';
 
-	let history: {
-		message: string;
-		from: 'user' | 'bob';
-	}[] = [];
+	let history: ChatHistoryItem[] = [];
+	let contextWindow: ChatHistoryItem[] = [];
 	let prompt = '';
+	let generating = false;
 
-	const submit = (e: SubmitEvent) => {
+	const newChat = async (e: SubmitEvent) => {
 		e.preventDefault();
 
-		history = [...history, { message: prompt, from: 'user' }];
-
+		generating = true;
 		fetch('/api/chat', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(prompt)
+			body: JSON.stringify({
+				cleanHistory: history,
+				contextWindow,
+				prompt
+			})
 		})
-			.then((res) => res.json())
-			.then((res) => (history = [...history, { message: res, from: 'bob' }]));
+			.then((res): Promise<LastEvaluation> => res.json())
+			.then((res) => {
+				history = res.cleanHistory;
+				contextWindow = res.contextWindow;
+				generating = false;
+			});
 
+		history = [...history, { type: 'user', text: prompt }];
 		prompt = '';
 	};
+
+	onMount(async () => {
+		generating = true;
+		await fetch('/api/chat/new', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		})
+			.then((res): Promise<LastEvaluation> => res.json())
+			.then((res) => {
+				history = res.cleanHistory;
+				contextWindow = res.contextWindow;
+			});
+		generating = false;
+	});
 </script>
 
 <div class="flex h-screen flex-col">
-	<div class="container flex-1 py-8">
-		{#each history as { message, from }, i}
-			<div class="flex gap-2">
-				{#if from === 'user'}
+	<div class="container h-[calc(100vh-5rem)] overflow-y-scroll py-8">
+		{#each history as message, i}
+			<div class="flex">
+				{#if message.type === 'user'}
 					<div class="max-w-[50%] rounded-lg bg-primary p-2 text-primary-foreground">
-						{message}
+						{message.text}
 					</div>
 					<div class="flex-1" />
-				{:else}
+				{:else if message.type === 'model'}
 					<div class="flex-1" />
 					<div class="max-w-[50%] rounded-lg bg-muted p-2 text-muted-foreground">
-						{message}
+						{message.response}
 					</div>
 				{/if}
 			</div>
 		{/each}
+
+		{#if generating}
+			<div class="flex">
+				<div class="flex-1" />
+				<Skeleton class="h-10 w-1/4" />
+			</div>
+		{/if}
 	</div>
 
-	<div class="border-t py-4">
-		<form class="container flex gap-2" on:submit={submit}>
+	<div class="border-t">
+		<form class="container flex h-20 items-center gap-2" on:submit={newChat}>
 			<Input placeholder="Message Bob" bind:value={prompt} />
-			<Button type="submit" class="h-10 w-10 p-3" disabled={!prompt}>
-				<Send />
+			<Button type="submit" class="h-10 w-10 p-3" disabled={!prompt || generating}>
+				{#if generating}
+					<Loader class="spinner" />
+				{:else}
+					<Send />
+				{/if}
 			</Button>
 		</form>
 	</div>
 </div>
+
+<style>
+	:global(.spinner) {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+</style>
