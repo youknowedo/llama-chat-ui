@@ -57,29 +57,31 @@
 </script>
 
 <div class="flex h-screen flex-col">
-	<div class="container h-[calc(100vh-5rem)] overflow-y-scroll py-8">
-		{#each history as message, i}
-			<div class="flex">
-				{#if message.type === 'user'}
-					<div class="max-w-[50%] rounded-lg bg-primary p-2 text-primary-foreground">
-						{message.text}
-					</div>
-					<div class="flex-1" />
-				{:else if message.type === 'model'}
-					<div class="flex-1" />
-					<div class="max-w-[50%] rounded-lg bg-muted p-2 text-muted-foreground">
-						{message.response}
-					</div>
-				{/if}
-			</div>
-		{/each}
+	<div class="h-[calc(100vh-5rem)] overflow-y-scroll py-8">
+		<div class="container">
+			{#each history as message, i}
+				<div class="flex">
+					{#if message.type === 'user'}
+						<div class="max-w-[50%] rounded-lg bg-primary p-2 text-primary-foreground">
+							{message.text}
+						</div>
+						<div class="flex-1" />
+					{:else if message.type === 'model'}
+						<div class="flex-1" />
+						<div class="max-w-[50%] rounded-lg bg-muted p-2 text-muted-foreground">
+							{message.response}
+						</div>
+					{/if}
+				</div>
+			{/each}
 
-		{#if generating}
-			<div class="flex">
-				<div class="flex-1" />
-				<Skeleton class="h-10 w-1/4" />
-			</div>
-		{/if}
+			{#if generating}
+				<div class="flex">
+					<div class="flex-1" />
+					<Skeleton class="h-10 w-1/4" />
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<div class="border-t">
