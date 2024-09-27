@@ -29,19 +29,19 @@
 </script>
 
 <div class="flex h-screen flex-col">
-	<div class="container flex-1">
+	<div class="container flex-1 py-8">
 		{#each history as { message, from }, i}
 			<div class="flex gap-2">
 				{#if from === 'user'}
-					<div class="flex-1" />
-					<div class="rounded-lg bg-gray-200 p-2">
+					<div class="max-w-[50%] rounded-lg bg-primary p-2 text-primary-foreground">
 						{message}
 					</div>
+					<div class="flex-1" />
 				{:else}
-					<div class="rounded-lg bg-gray-300 p-2">
+					<div class="flex-1" />
+					<div class="max-w-[50%] rounded-lg bg-muted p-2 text-muted-foreground">
 						{message}
 					</div>
-					<div class="flex-1" />
 				{/if}
 			</div>
 		{/each}
