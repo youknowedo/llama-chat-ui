@@ -1,6 +1,5 @@
+import { llamaChat } from '$lib/server';
 import type { RequestHandler } from '@sveltejs/kit';
-import { getLlama, LlamaChat } from 'node-llama-cpp';
-import path from 'node:path';
 import type { LastEvaluation } from '../../../app';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -10,15 +9,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	const chatHistoryContextWindow = data.contextWindow;
 	const lastContextShiftMetadata = data.contextShiftMetadata;
 	const prompt = data.prompt;
-
-	const llama = await getLlama();
-	const model = await llama.loadModel({
-		modelPath: path.join(process.cwd(), 'src', 'lib', 'models', 'llama-2-7b-chat-q4_k_s.gguf')
-	});
-	const context = await model.createContext();
-	const llamaChat = new LlamaChat({
-		contextSequence: context.getSequence()
-	});
 
 	console.log('Prompt:', prompt);
 	chatHistory.push({
@@ -50,6 +40,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	});
 
-	context.dispose();
 	return new Response(JSON.stringify(res.lastEvaluation));
 };
