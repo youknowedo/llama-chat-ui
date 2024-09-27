@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { page } from '$app/stores';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { trpc } from '$lib/trpc/client';
 	import { Send } from 'lucide-svelte';
 	import Loader from 'lucide-svelte/icons/loader';
 	import type { ChatHistoryItem } from 'node-llama-cpp';
@@ -17,21 +19,15 @@
 		e.preventDefault();
 
 		generating = true;
-		fetch('/api/chat', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
+		trpc($page)
+			.chat.prompt.mutate({
+				prompt,
 				cleanHistory: history,
-				contextWindow,
-				prompt
+				contextWindow
 			})
-		})
-			.then((res): Promise<LastEvaluation> => res.json())
 			.then((res) => {
-				history = res.cleanHistory;
-				contextWindow = res.contextWindow;
+				history = res.cleanHistory as ChatHistoryItem[];
+				contextWindow = res.contextWindow as ChatHistoryItem[];
 				generating = false;
 			});
 
@@ -41,16 +37,11 @@
 
 	onMount(async () => {
 		generating = true;
-		await fetch('/api/chat/new', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		})
-			.then((res): Promise<LastEvaluation> => res.json())
+		await trpc($page)
+			.chat.create.mutate()
 			.then((res) => {
-				history = res.cleanHistory;
-				contextWindow = res.contextWindow;
+				history = res.cleanHistory as ChatHistoryItem[];
+				contextWindow = res.contextWindow as ChatHistoryItem[];
 			});
 		generating = false;
 	});
