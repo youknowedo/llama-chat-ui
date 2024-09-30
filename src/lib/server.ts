@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const llama = await getLlama();
 const model = await llama.loadModel({
-	modelPath: path.join(process.cwd(), 'src', 'lib', 'models', 'llama-2-7b-chat-q4_k_s.gguf')
+	modelPath: path.join(process.cwd(), 'src', 'lib', 'models', 'llama-3.2-3b-instruct-q4_k_m.gguf')
 });
 
 const context = await model.createContext();

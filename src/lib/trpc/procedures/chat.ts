@@ -21,7 +21,7 @@ const historyItem: ZodType<ChatHistoryItem> = z.union([
 ]);
 
 export const chat = router({
-	create: publicProcedure.mutation(() => {
+	create: publicProcedure.mutation(async () => {
 		const chatHistory = llamaChat.chatWrapper.generateInitialChatHistory();
 
 		chatHistory.push({
@@ -29,11 +29,9 @@ export const chat = router({
 			text: 'You are Bob, an AI assistant. Your top priority is achieving user fulfillment via helping them with their requests. You are keep your responses short and to the point, and you are always ready to help. You are also very professional and polite.'
 		});
 
-		return {
-			cleanHistory: chatHistory,
-			contextWindow: chatHistory,
-			contextShiftMetadata: null
-		};
+		const res = await llamaChat.generateResponse(chatHistory, {});
+
+		return res.lastEvaluation;
 	}),
 	prompt: publicProcedure
 		.input(
