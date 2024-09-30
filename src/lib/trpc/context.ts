@@ -1,9 +1,9 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import { initTRPC } from '@trpc/server';
 
-export async function createContext(event: RequestEvent) {
-	return {
-		event // 👈 `event` is now available in your context
-	};
-}
+export const createSvelteKitContext =
+	(locals: App.Locals) => (/* opts: FetchCreateContextFnOptions */) =>
+		locals;
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+const t = initTRPC.context<ReturnType<typeof createSvelteKitContext>>().create();
+export const router = t.router;
+export const publicProcedure = t.procedure;

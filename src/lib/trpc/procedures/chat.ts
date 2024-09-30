@@ -1,7 +1,9 @@
 import { llamaChat } from '$lib/server';
+import { observable } from '@trpc/server/observable';
 import type { ChatHistoryItem } from 'node-llama-cpp';
 import { z, ZodType } from 'zod';
-import { t } from '../router';
+import type { LastEvaluation } from '../../../app';
+import { publicProcedure, router } from '../context';
 
 const historyItem: ZodType<ChatHistoryItem> = z.union([
 	z.object({
@@ -18,8 +20,8 @@ const historyItem: ZodType<ChatHistoryItem> = z.union([
 	})
 ]);
 
-export const chat = t.router({
-	create: t.procedure.mutation(() => {
+export const chat = router({
+	create: publicProcedure.mutation(() => {
 		const chatHistory = llamaChat.chatWrapper.generateInitialChatHistory();
 
 		chatHistory.push({
@@ -33,7 +35,7 @@ export const chat = t.router({
 			contextShiftMetadata: null
 		};
 	}),
-	prompt: t.procedure
+	prompt: publicProcedure
 		.input(
 			z.object({
 				cleanHistory: z.array(historyItem),
@@ -79,5 +81,67 @@ export const chat = t.router({
 			});
 
 			return res.lastEvaluation;
+		}),
+	promptAsync: publicProcedure
+		.input(
+			z.object({
+				cleanHistory: z.array(historyItem),
+				contextWindow: z.array(historyItem),
+				contextShiftMetadata: z.nullable(z.any()),
+				prompt: z.string()
+			})
+		)
+		.subscription(({ input, signal }) => {
+			return observable<
+				{ type: 'chunk'; text: string } | { type: 'eval'; lastEval: LastEvaluation }
+			>((emit) => {
+				const chatHistory = input.cleanHistory;
+				const chatHistoryContextWindow = input.contextWindow;
+				const lastContextShiftMetadata = input.contextShiftMetadata;
+				const prompt = input.prompt;
+
+				console.log('Prompt:', prompt);
+				chatHistory.push({
+					type: 'user',
+					text: input.prompt
+				});
+				chatHistoryContextWindow.push({
+					type: 'user',
+					text: input.prompt
+				});
+
+				chatHistory.push({
+					type: 'model',
+					response: []
+				});
+				chatHistoryContextWindow.push({
+					type: 'model',
+					response: []
+				});
+
+				(async () => {
+					const res = await llamaChat.generateResponse(chatHistory, {
+						onTextChunk: (text) =>
+							emit.next({
+								type: 'chunk',
+								text
+							}),
+						signal,
+						contextShift: {
+							lastEvaluationMetadata: lastContextShiftMetadata
+						},
+						lastEvaluationContextWindow: {
+							history: chatHistoryContextWindow
+						}
+					});
+
+					emit.next({
+						type: 'eval',
+						lastEval: res.lastEvaluation
+					});
+				})();
+
+				return () => {};
+			});
 		})
 });

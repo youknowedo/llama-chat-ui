@@ -19,25 +19,41 @@
 		e.preventDefault();
 
 		generating = true;
-		trpc($page)
-			.chat.prompt.mutate({
+		const p = trpc().chat.promptAsync.subscribe(
+			{
 				prompt,
 				cleanHistory: history,
 				contextWindow
-			})
-			.then((res) => {
-				history = res.cleanHistory as ChatHistoryItem[];
-				contextWindow = res.contextWindow as ChatHistoryItem[];
-				generating = false;
-			});
+			},
+			{
+				onData: (res) => {
+					let item = history[history.length - 1];
+					switch (res.type) {
+						case 'chunk':
+							if (item.type !== 'model')
+								item = history[history.length - 1] = { type: 'model', response: [res.text] };
 
-		history = [...history, { type: 'user', text: prompt }];
+							item.response[0] += res.text;
+							history[history.length - 1] = item;
+							break;
+						case 'eval':
+							history = res.lastEval.cleanHistory as ChatHistoryItem[];
+							contextWindow = res.lastEval.contextWindow as ChatHistoryItem[];
+							generating = false;
+							p.unsubscribe();
+							break;
+					}
+				}
+			}
+		);
+
+		history = [...history, { type: 'user', text: prompt }, { type: 'model', response: [''] }];
 		prompt = '';
 	};
 
 	onMount(async () => {
 		generating = true;
-		await trpc($page)
+		await trpc()
 			.chat.create.mutate()
 			.then((res) => {
 				history = res.cleanHistory as ChatHistoryItem[];
@@ -59,19 +75,16 @@
 						<div class="flex-1" />
 					{:else if message.type === 'model'}
 						<div class="flex-1" />
-						<div class="max-w-[50%] rounded-lg bg-muted p-2 text-muted-foreground">
-							{message.response}
-						</div>
+						{#if typeof message.response[0] == 'string' && message.response[0].length > 0}
+							<div class="max-w-[50%] rounded-lg bg-muted p-2 text-muted-foreground">
+								{message.response}
+							</div>
+						{:else}
+							<Skeleton class="h-10 w-1/4" />
+						{/if}
 					{/if}
 				</div>
 			{/each}
-
-			{#if generating}
-				<div class="flex">
-					<div class="flex-1" />
-					<Skeleton class="h-10 w-1/4" />
-				</div>
-			{/if}
 		</div>
 	</div>
 
